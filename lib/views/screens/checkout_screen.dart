@@ -296,13 +296,26 @@ class _CheckOutScreenState extends State<CheckOutScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 List<DocumentSnapshot> cartItems = snapshot.data!.docs;
+                final double newTotal = cartItems.fold<double>(0, (sum, item) {
+                  final data = item.data() as Map<String, dynamic>;
+                  return sum +
+                      (data['unit_price'] as num) * (data['quantity'] as num);
+                });
+                if (_totalPrice != newTotal) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _totalPrice = newTotal;
+                      });
+                    }
+                  });
+                }
                 return ListView.builder(
                   itemCount: cartItems.length,
                   itemBuilder: (BuildContext context, int index) {
                     final cartData =
                         cartItems[index].data() as Map<String, dynamic>;
                     final productRef = cartData['productRef'];
-                    _totalPrice = 0;
                     return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
                           .collection('Product')
@@ -316,8 +329,6 @@ class _CheckOutScreenState extends State<CheckOutScreen> {
                               productSnapshot.data != null) {
                             final productData = productSnapshot.data!.data()
                                 as Map<String, dynamic>;
-                            _totalPrice +=
-                                cartData['unit_price'] * cartData['quantity'];
                             return Card(
                               elevation: 6,
                               margin: EdgeInsets.all(8),
